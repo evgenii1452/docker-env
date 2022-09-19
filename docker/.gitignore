@@ -1,3 +1,4 @@
+/postgres/*
 /MySQL/*
 !/MySQL/.keep
 /Nginx/core
