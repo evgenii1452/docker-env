@@ -1,0 +1,107 @@
+version: '3.8'
+services:
+  nginx:
+    image: nginx:latest
+    container_name: ${PROJECT_NAME}_nginx
+    ports:
+      - "88:80"
+#      - "443:443"
+    volumes:
+      - ./docker/Nginx/core:/etc/nginx/conf.d
+      - ../:/var/www/
+      - ./docker/Nginx/Logs:/var/log/nginx/
+      - ./docker/Nginx/html:/usr/share/nginx/html/
+    restart: always
+    networks:
+      web_net:
+        ipv4_address: 192.168.28.2
+
+  redis:
+    image: redis:6.2-alpine
+    container_name: ${PROJECT_NAME}_redis
+    volumes:
+      - ./docker/redis/redis.conf:/usr/local/etc/redis/redis.conf
+    ports:
+      - "63790:6379"
+    networks:
+      web_net:
+        ipv4_address: 192.168.28.3
+
+  postgres:
+    image: postgres
+    restart: always
+    container_name: ${PROJECT_NAME}_postgres
+    volumes:
+      - ./docker/postgres:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    ports:
+      - "54320:5432"
+    networks:
+      web_net:
+        ipv4_address: 192.168.28.4
+
+  adminer:
+    image: adminer
+    restart: always
+    container_name: ${PROJECT_NAME}_adminer
+    ports:
+      - "8081:8080"
+    links:
+      - postgres:db
+    networks:
+      web_net:
+        ipv4_address: 192.168.28.5
+
+  php:
+    build: docker/PHP
+    container_name: ${PROJECT_NAME}_php-fpm
+    volumes:
+      - ../:/var/www/
+      - ./docker/PHP/local.ini:/usr/local/etc/php/conf.d/local.ini
+    networks:
+      web_net:
+        ipv4_address: 192.168.28.6
+
+  #mysql
+  mysql:
+    image: mysql:latest
+    ports:
+      - "3306:3306"
+    container_name: ${PROJECT_NAME}_mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+    volumes:
+      - ./docker/MySQL:/var/lib/mysql
+      - ./docker/dumps/:/var/dumps/
+    restart: always
+    networks:
+      web_net:
+        ipv4_address: 192.168.28.7
+  #phpmyadmin
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: ${PROJECT_NAME}_phpmyadmin
+    ports:
+      - 8090:80
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      PMA_ARBITRARY: 1
+    networks:
+      web_net:
+        ipv4_address: 192.168.28.8
+
+
+networks:
+  web_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.28.0/24
